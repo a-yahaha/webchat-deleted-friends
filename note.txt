@@ -1,0 +1,9 @@
+1 input它会根据用户输入变换相应的类型,而且如果要输入字符和字符串的时候必须要用引号包起来,而raw_input则是不管用户输入什么类型的都会转变成字符型.
+
+2 urllib2.urlopen()函数不支持验证、cookie或者其它HTTP高级功能。要支持这些功能，必须使用build_opener()函数创建自定义Opener对象。
+
+3 python 中获取时间 time.time()
+
+4
+s.decode("utf-8", "ignore") 忽略其中有异常的编码，仅显示有效的编码
+s.decode("utf-8", "replace") 替换其中异常的编码，这个相对来可能一眼就知道那些字符编码出问题了。
