@@ -1,1 +1,11 @@
-Thu, 07 Jan 2016 00:50:31 wdf.py[line:45] DEBUG getUIID data = window.QRLogin.code = 200; window.QRLogin.uuid = "gdoD2g524g==";
+Tue, 12 Jan 2016 01:09:59 wdf.py[line:53] DEBUG getUIID data = window.QRLogin.code = 200; window.QRLogin.uuid = "Abh83-1ZfA==";
+Tue, 12 Jan 2016 01:09:59 wdf.py[line:61] DEBUG code = 200 , uuid = Abh83-1ZfA==
+Tue, 12 Jan 2016 01:09:59 wdf.py[line:79] DEBUG qr_image_path = /media/sf_data/github/sherry/webchat-deleted-friends/qr_image.jpg
+Tue, 12 Jan 2016 01:09:59 wdf.py[line:87] DEBUG sys.platform = linux2
+Tue, 12 Jan 2016 01:09:59 wdf.py[line:35] ERROR data.encode error : 'NoneType' object has no attribute 'encode'
+Tue, 12 Jan 2016 01:10:10 wdf.py[line:104] DEBUG waitLogin data = window.code=201;
+Tue, 12 Jan 2016 01:10:10 wdf.py[line:35] ERROR data.encode error : 'NoneType' object has no attribute 'encode'
+Tue, 12 Jan 2016 01:10:12 wdf.py[line:104] DEBUG waitLogin data = window.code=200;
+window.redirect_uri="https://wx2.qq.com/cgi-bin/mmwebwx-bin/webwxnewloginpage?ticket=AyedDEDfT2Vhj_ck8NmbSDNz@qrticket_0&uuid=Abh83-1ZfA==&lang=zh_CN&scan=1452532213";
+Tue, 12 Jan 2016 01:10:12 wdf.py[line:35] ERROR data.encode error : 'NoneType' object has no attribute 'encode'
+Tue, 12 Jan 2016 01:10:13 wdf.py[line:133] DEBUG login return data = <error><ret>0</ret><message>OK</message><skey>@crypt_5d78f094_ec8afa7ab4c4fa97d995d8957cec57f2</skey><wxsid>A17e8rHUrxUcJTi6</wxsid><wxuin>757895900</wxuin><pass_ticket>oTTcwOdkXUq%2FQg582ur89pCSnNH3SD15gFV0CIITQjHjjQvHk2Qggvo0B5iOyS8Q</pass_ticket><isgrayscale>1</isgrayscale></error>
