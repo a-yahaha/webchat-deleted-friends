@@ -6,6 +6,8 @@ Created on 2016年1月6日
 2016/01/07 完成生成二维码图片，在不同平台打开图片
 2016/01/12 二维码扫码登录成功，post请求数据时中的cookies关键值
    need to do 怎么关闭扫码成功后的打开的图片
+2016/01/13 借助firfox中插件firebug调试
+  获取所有联系人包括公众号和服务号，过滤出好友
 @author: haibara
 '''
 import logging
@@ -17,6 +19,7 @@ import os
 import sys
 import subprocess
 import xml.dom.minidom as minidom
+import json
 
 ''' 配置log信息 '''
 logging.basicConfig(level=logging.DEBUG,
@@ -27,7 +30,7 @@ logging.basicConfig(level=logging.DEBUG,
 uuid = ''
 deviceId = 'e1234567890'
 QRImagePath = os.path.join(os.getcwd(), 'qr_image.jpg')
-
+DEBUG = True
 def getRequest(url, data=None):
     try:
         data = data.encode('utf-8')
@@ -125,7 +128,7 @@ def waitLogin():
 
 ''' 登录'''
 def login():
-    global skey, wxsid, wxuin, pass_ticket, baseRequest
+    global skey, wxsid, wxuin, pass_ticket, BaseRequest
     request = getRequest(redirect_uri)
     response = my_urllib.urlopen(request)
     data = response.read().decode('utf-8', 'replace')
@@ -160,12 +163,104 @@ def login():
         return False
     
     #后续通信需要使用post的方式提交数据
-    baseRequest = {
+    BaseRequest = {
         'Uin' : int(wxuin) ,
         'Sid' : wxsid ,
         'Skey' : skey ,
         'DeviceID' : deviceId#DeviceID是一个本地生成的随机字符串 e开头
     }
+    return True
+    
+def webwxinit():
+    # r参数代表的是当前时间
+    url = base_uri + '/webwxinit?r=%s&lang=%s&pass_ticket=%s' % (int(time.time()), 'zh_CN', pass_ticket)
+    params = {
+        'BaseRequest' : BaseRequest
+    }
+    #请求是post的方式，携带json数据 --> firebug调试可以看出
+    request = getRequest(url, json.dumps(params))
+    request.add_header('Content-Type', 'application/json;charset=utf-8')
+    response = my_urllib.urlopen(request)
+    data = response.read()
+    # debug 写入到文件中
+    if DEBUG:
+        f = open(os.path.join(os.getcwd(), 'webwxinit'), 'wb')
+        f.write(data)
+        f.close()
+    data = data.decode('utf-8', 'replace')
+    '''
+           返回的json数据：
+    ContactList主要用来表示联系人（此列表不全，只包括了类似通讯录助手、文件助手、微信团队和一些公众帐号等，后面会通过另一接口去获得更全面的信息），
+    SyncKey是用户与服务器同步的信息，
+    User就是当前登录用户自己的信息。
+    '''
+    global ContactList, SyncKey, User
+    dict = json.loads(data)
+    ContactList = dict['ContactList']
+    User = dict['User']
+    
+    SyncKeyList = []
+    print("type(dict['SyncKey']['List']) = {0}".format(type(dict['SyncKey']['List'])))
+    # type(dict['SyncKey']['List']) = list
+    for item in dict['SyncKey']['List']:
+        SyncKeyList.append('%s_%s' % (item['Key'], item['Val']))
+    print('SyncKeyList = {0}'.format(SyncKeyList))
+    SyncKey = '|'.join(SyncKeyList)
+    print('SyncKey = {0}'.format(SyncKey))
+    
+    ret = dict['BaseResponse']['Ret']
+    errMsg = dict['BaseResponse']['ErrMsg']
+    logging.debug("webwxinit Ret = {0} , ErrMsg = {1}".format(ret, errMsg))
+    if ret == 0:
+        return True
+    return False
+
+#获取所有联系人
+def webwxgetcontact():
+    # r参数代表的是当前时间
+    url = base_uri + '/webwxgetcontact?r=%s&lang=%s&pass_ticket=%s' % (int(time.time()), 'zh_CN', pass_ticket)
+    params = {
+        'BaseRequest' : BaseRequest
+    }
+    #请求是post的方式，携带json数据 --> firebug调试可以看出
+    request = getRequest(url, json.dumps(params))
+    request.add_header('Content-Type', 'application/json;charset=utf-8')
+    response = my_urllib.urlopen(request)
+    data = response.read()
+    # debug 写入到文件中
+    if DEBUG:
+        f = open(os.path.join(os.getcwd(), 'webwxcontact'), 'wb')
+        f.write(data)
+        f.close()
+    data = data.decode('utf-8', 'replace')
+#     print('contact data = %s' %(data))
+    
+    dict = json.loads(data)
+    MemberList = dict['MemberList']
+    # 微信分为公众号(8)，服务号(24)，企业号，好友(0) 使用VerifyFlag区分
+    #微软小冰 24 filehelper 也为0，需要找出特殊user
+    specialUsers = ["newsapp", "fmessage", "filehelper", "weibo", "qqmail", "tmessage", "qmessage", "qqsync"
+        , "floatbottle", "lbsapp", "shakeapp", "medianote", "qqfriend", "readerapp", "blogapp", "facebookapp"
+        , "masssendapp", "meishiapp", "feedsapp", "voip", "blogappweixin", "weixin", "brandsessionholder", "weixinreminder"
+        , "wxid_novlwrv3lqwv11", "gh_22b87fa7cb3c", "officialaccounts", "notification_messages", "wxitil", "userexperience_alarm"]
+    #过滤不是好友的人
+    for i in range(len(MemberList) - 1, -1, -1):
+        member = MemberList[i]
+        if member['VerifyFlag'] == 8 or member['VerifyFlag'] == 24:#过滤公众号和服务号
+            MemberList.remove(member)
+        elif member['UserName'] in specialUsers:#过滤特殊用户
+            MemberList.remove(member)
+        elif member['UserName'].find('@@') != -1:#过滤保存的群聊天
+            MemberList.remove(member)
+        elif member['UserName'] == User['UserName']:#过滤自己
+            MemberList.remove(member)
+            
+    if DEBUG:
+        f = open(os.path.join(os.getcwd(), 'MemberList'), 'w')
+        f.write(json.dumps(MemberList))
+        f.close()
+    print('friends num = {0}'.format(len(MemberList)))
+    return MemberList 
     
 
 def main():
@@ -186,8 +281,17 @@ def main():
         pass
     
     os.remove(QRImagePath) #关闭显示图片的窗口,windows不可
-    login()
+    
+    if not login():
+        print('login fail')
+        return
 
+    if not webwxinit():
+        print('webwxint fail')
+        return
+    
+    webwxgetcontact()
+    
 if __name__ == '__main__':
 #     print('中国，{0}'.format('你好'))
 #     print("按回车键 开始")
