@@ -8,6 +8,12 @@ Created on 2016年1月6日
    need to do 怎么关闭扫码成功后的打开的图片
 2016/01/13 借助firfox中插件firebug调试
   获取所有联系人包括公众号和服务号，过滤出好友
+2016/01/14 聊天室接口被限制，不能使用
+新建聊天室的方法
+添加好友到聊天室
+聊天室删除好友
+微信通信接口：http://www.tanhao.me/talk/1466.html/
+后续再补充
 @author: haibara
 '''
 import logging
@@ -261,7 +267,101 @@ def webwxgetcontact():
         f.close()
     print('friends num = {0}'.format(len(MemberList)))
     return MemberList 
-    
+
+def createChatroom(UserNames):
+    # MemberList = []
+    # for UserName in UserNames:
+        # MemberList.append({'UserName': UserName})
+    MemberList = [{'UserName': UserName} for UserName in UserNames]
+
+    url = base_uri + \
+        '/webwxcreatechatroom?pass_ticket=%s&r=%s' % (
+            pass_ticket, int(time.time()))
+    params = {
+        'BaseRequest': BaseRequest,
+        'MemberCount': len(MemberList),
+        'MemberList': MemberList,
+        'Topic': '',
+    }
+
+    request = getRequest(url=url, data=json.dumps(params))
+    request.add_header('ContentType', 'application/json; charset=UTF-8')
+    response = my_urllib.urlopen(request)
+    data = response.read().decode('utf-8', 'replace')
+
+    # print(data)
+
+    dic = json.loads(data)
+    ChatRoomName = dic['ChatRoomName']
+    MemberList = dic['MemberList']
+    DeletedList = []
+    for Member in MemberList:
+        if Member['MemberStatus'] == 4:  # 被对方删除了
+            DeletedList.append(Member['UserName'])
+
+    ErrMsg = dic['BaseResponse']['ErrMsg']
+    if DEBUG:
+        print("Ret: %d, ErrMsg: %s" % (dic['BaseResponse']['Ret'], ErrMsg))
+
+    return ChatRoomName, DeletedList
+
+
+def deleteMember(ChatRoomName, UserNames):
+    url = base_uri + \
+        '/webwxupdatechatroom?fun=delmember&pass_ticket=%s' % (pass_ticket)
+    params = {
+        'BaseRequest': BaseRequest,
+        'ChatRoomName': ChatRoomName,
+        'DelMemberList': ','.join(UserNames),
+    }
+
+    request = getRequest(url=url, data=json.dumps(params))
+    request.add_header('ContentType', 'application/json; charset=UTF-8')
+    response = my_urllib.urlopen(request)
+    data = response.read().decode('utf-8', 'replace')
+
+    # print(data)
+
+    dic = json.loads(data)
+    ErrMsg = dic['BaseResponse']['ErrMsg']
+    Ret = dic['BaseResponse']['Ret']
+    if DEBUG:
+        print("Ret: %d, ErrMsg: %s" % (Ret, ErrMsg))
+
+    if Ret != 0:
+        return False
+
+    return True
+
+
+def addMember(ChatRoomName, UserNames):
+    url = base_uri + \
+        '/webwxupdatechatroom?fun=addmember&pass_ticket=%s' % (pass_ticket)
+    params = {
+        'BaseRequest': BaseRequest,
+        'ChatRoomName': ChatRoomName,
+        'AddMemberList': ','.join(UserNames),
+    }
+
+    request = getRequest(url=url, data=json.dumps(params))
+    request.add_header('ContentType', 'application/json; charset=UTF-8')
+    response = my_urllib.urlopen(request)
+    data = response.read().decode('utf-8', 'replace')
+
+    # print(data)
+
+    dic = json.loads(data)
+    MemberList = dic['MemberList']
+    DeletedList = []
+    for Member in MemberList:
+        if Member['MemberStatus'] == 4:  # 被对方删除了
+            DeletedList.append(Member['UserName'])
+
+    ErrMsg = dic['BaseResponse']['ErrMsg']
+    if DEBUG:
+        print("Ret: %d, ErrMsg: %s" % (dic['BaseResponse']['Ret'], ErrMsg))
+
+    return DeletedList  
 
 def main():
     try:    
@@ -280,7 +380,7 @@ def main():
     while not waitLogin() :
         pass
     
-    os.remove(QRImagePath) #关闭显示图片的窗口,windows不可
+#     os.remove(QRImagePath) #关闭显示图片的窗口,windows不可
     
     if not login():
         print('login fail')
